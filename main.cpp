@@ -180,9 +180,6 @@ int main() {
     bool gameOver = false;
     bool beginBuffer = true;
     bool PopBullet = false;
-    bool PopEnemyShape = false;
-    bool enemyShapeBulletCollision = false;
-    bool bulletFired = false;
     bool outOfBullets = false;
     int score = 0;
 
@@ -295,7 +292,6 @@ int main() {
         if (S) Bullet::fireBullet(bullet_queue, 0, 3, 1, 1);
         if (A) Bullet::fireBullet(bullet_queue, 3, 0, -1, 1);
         if (D) Bullet::fireBullet(bullet_queue, 3, 0, 1, 1);
-        if ( W || S || A || D ) bulletFired = true;
 
 
         for(int i = 0; i < enemyShapeVect.size(); i++){
@@ -313,7 +309,6 @@ int main() {
             if (EnemyShapeBulletCollision(enemyShapePosition, bulletPosition) & bullet_queue.front().isActive){
                 cout << "Enemy Shape Collision...enemy object # = " << enemyShapeVect[i].enemyShapeNum << endl;
                 PopBullet = true;
-                PopEnemyShape = true;
                 enemyShapeVect[i].destroyed = true;
 
                 score += 1;
@@ -322,15 +317,6 @@ int main() {
             // Check Boundaries of Objects in Window
             // Physics (Moving Enemy Squares) - Go through all squares
             checkEnemyShapeBoundaries(enemyShapeVect, i, enemyShapePosition);
-//            int Xpos = enemyShapeVect[i].attr.getPosition().x;
-//            int Ypos = enemyShapeVect[i].attr.getPosition().y;
-//                // Makes sure enemy squares stay in screen
-//            if (Xpos < 0 || Xpos > WIDTH - 50) enemyShapeVect[i].xEnemyShapeVelocity *= -1; // 50 for Enemy Shape width
-//            if (Ypos < 0 || Ypos > HEIGHT - 50) enemyShapeVect[i].yEnemyShapeVelocity *= -1; // 50 for Enemy Shape width
-//
-//            enemyShapePosition.x += enemyShapeVect[i].xEnemyShapeVelocity;
-//            enemyShapePosition.y += enemyShapeVect[i].yEnemyShapeVelocity;
-//            enemyShapeVect[i].attr.setPosition(enemyShapePosition);
         }
 
         // Check Bullet Boundaries
@@ -347,7 +333,6 @@ int main() {
                 swap(enemyShapeVect[i], enemyShapeVect.back());
                 cout << "Enemy Shape about to be Deleted:...enemy object # = " << enemyShapeVect.back().enemyShapeNum << endl;
                 enemyShapeVect.pop_back();
-                PopEnemyShape = false;
             }
         }
 
@@ -356,16 +341,6 @@ int main() {
             PopBullet = false;
             bullet_queue.pop();
         }
-
-        // Pop Enemy Shape off enemyShapeVect if needed
-//        if(PopEnemyShape && enemyShapeVect.back().destroyed){
-//            PopEnemyShape = false;
-//            cout << "Enemy Shape about to be Deleted:...enemy object # = " << enemyShapeVect.back().enemyShapeNum << endl;
-////            cout << "Enemy Shape about to be Deleted: " << enemyShapeVect.back().attr.getPosition().x << " & y " << enemyShapeVect.back().attr.getPosition().y << endl;
-//            enemyShapeVect.pop_back();
-//            cout << "Enemy Shape Deleted" << endl;
-//            cout << "Enemy Shape Vect back() popped..size is: " << enemyShapeVect.size() << endl;
-//        }
 
         // Update Score if Shape gets hit
         scoreText.setString("Score: " + to_string(score));
