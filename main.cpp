@@ -50,6 +50,16 @@ public:
         return enemyShape;
     }
 
+    static vector<EnemyShape> createEnemyShapeVect(vector<EnemyShape> & enemyShapeVect){
+        for (int i = 0; i < NUM_ENEMY_SHAPES; i++){
+            EnemyShape enemy = EnemyShape::create_EnemyShape();
+            enemy.enemyShapeNum = i + 1;
+            enemyShapeVect.push_back(enemy);
+        }
+
+        return enemyShapeVect;
+    }
+
     void move_object() {
 
     }
@@ -71,6 +81,15 @@ public:
 
         cout << "Bullet Created" << endl;
         return bullet; // Returning an object (bullet)
+    }
+
+    static queue<Bullet> createBulletQueue(queue<Bullet> & bullet_queue) {
+        for (int i = 0; i < NUM_BULLETS; i++){
+            Bullet bullet = Bullet::create_Bullet();
+            bullet_queue.push(bullet);
+        }
+
+        return bullet_queue;
     }
 
     static void fireBullet(queue<Bullet> & queue, int x, int y, int p, int n){
@@ -104,8 +123,38 @@ bool EnemyShapeBulletCollision( sf::Vector2f enemyShapePosition,  sf::Vector2f b
 sf::Text setTextCharacteristics(sf::Text & textObject, int xPos, int yPos, int charSize) {
     textObject.setPosition(xPos, yPos);
     textObject.setCharacterSize(charSize);
+    textObject.setStyle(sf::Text::Bold);
 
     return textObject;
+}
+
+void checkEnemyShapeBoundaries(vector<EnemyShape> & enemyShapeVect, int i, sf::Vector2f enemyShapePosition){
+    int Xpos = enemyShapeVect[i].attr.getPosition().x;
+    int Ypos = enemyShapeVect[i].attr.getPosition().y;
+    // Makes sure enemy squares stay in screen
+    if (Xpos < 0 || Xpos > WIDTH - 50) enemyShapeVect[i].xEnemyShapeVelocity *= -1; // 50 for Enemy Shape width
+    if (Ypos < 0 || Ypos > HEIGHT - 50) enemyShapeVect[i].yEnemyShapeVelocity *= -1; // 50 for Enemy Shape width
+
+    enemyShapePosition.x += enemyShapeVect[i].xEnemyShapeVelocity;
+    enemyShapePosition.y += enemyShapeVect[i].yEnemyShapeVelocity;
+    enemyShapeVect[i].attr.setPosition(enemyShapePosition);
+}
+
+bool checkBulletBoundaries(queue<Bullet> & bullet_queue, bool PopBullet){
+    int XBulletpos = bullet_queue.front().attr.getPosition().x;
+    int YBulletpos = bullet_queue.front().attr.getPosition().y;
+
+    // If bullet hits boundary of window, delete bullet
+    if ((XBulletpos < 0 || XBulletpos > WIDTH - 10) && bullet_queue.front().isActive) { // 10 for Enemy Shape width
+        PopBullet = true;
+        bullet_queue.front().isActive = false;
+    }
+    if ((YBulletpos < 0 || YBulletpos > HEIGHT - 10) && bullet_queue.front().isActive) { // 10 for Enemy Shape width
+        PopBullet = true;
+        bullet_queue.front().isActive = false;
+    }
+
+    return PopBullet;
 }
 
 int main() {
@@ -142,38 +191,27 @@ int main() {
     if (!font.loadFromFile("arial.ttf")) exit(1); // error...
 
     // INITIATE AND SPECIALIZE TEXTS
+    //     Score Text
     sf::Text scoreText("Score: " + to_string(score), font); // Cast type score int to a string --> to_string(score)
-    scoreText.setStyle(sf::Text::Bold);
     scoreText.setFillColor(sf::Color::Green);
 
     //     OutOfBullets Text
     sf::Text OutOfBullets("Out Of Bullets :(", font); // Cast type score int to a string --> to_string(score)
-    OutOfBullets.setStyle(sf::Text::Bold);
     OutOfBullets.setFillColor(sf::Color::Cyan);
 
     //     Game Over Text
     sf::Text GameOver("GAME OVER", font); // Cast type score int to a string --> to_string(score)
-    GameOver.setStyle(sf::Text::Bold);
     GameOver.setFillColor(sf::Color::Red);
 
     //     Begin Buffer Text
     int time = 3;
     sf::Text BeginBuffer(to_string(time), font); // Cast type score int to a string --> to_string(score)
-    BeginBuffer.setStyle(sf::Text::Bold);
     BeginBuffer.setFillColor(sf::Color::Blue);
+
 
     // Creates Enemy Shapes and adds them to enemyShapeVect by calling helper function
     vector<EnemyShape> enemyShapeVect;
-    for (int i = 0; i < NUM_ENEMY_SHAPES; i++){
-        EnemyShape enemy = EnemyShape::create_EnemyShape();
-        enemy.enemyShapeNum = i + 1;
-        enemyShapeVect.push_back(enemy);
-    }
-//    queue<EnemyShape> enemyShapeQueue;
-//    for (int i = 0; i < NUM_ENEMY_SHAPES; i++){
-//        EnemyShape enemy = EnemyShape::create_EnemyShape();
-//        enemyShapeVect.push_back(enemy);
-//    }
+    EnemyShape::createEnemyShapeVect(enemyShapeVect);
 
     // Creates bullets and adds them to the bulletVect
 //    vector<Bullet> bulletVect;
@@ -183,10 +221,7 @@ int main() {
 //    }
     // Create bullet_queue
     queue<Bullet> bullet_queue;
-    for (int i = 0; i < NUM_BULLETS; i++){
-        Bullet bullet = Bullet::create_Bullet();
-        bullet_queue.push(bullet);
-    }
+    Bullet::createBulletQueue(bullet_queue);
 
 
     while (window.isOpen())
@@ -274,58 +309,34 @@ int main() {
             if (EnemyShapeUserCollision(playerPosition, enemyShapePosition)){
                 gameOver = true;
             }
-//            cout << "Printing enemyShapeVect size: " << enemyShapeVect.size() << endl;
-
-//            tempEnemyShapeVect.push_back(enemyShapeVect[i]);
 
             if (EnemyShapeBulletCollision(enemyShapePosition, bulletPosition) & bullet_queue.front().isActive){
-
-//                cout << "Enemy Shape Collision...EnemyShapeVect[i] = " << enemyShapeVect[i].attr.getPosition().x << endl;
-//                cout << "Enemy Shape Collision...EnemyShapeVect[i] = " << enemyShapeVect[i].attr.getPosition().x << " & y " << enemyShapeVect[i].attr.getPosition().y << endl;
-//                cout << "Enemy Shape Collision...current object = " << enemyShapePosition.x << " & y " << enemyShapePosition.y << endl;
                 cout << "Enemy Shape Collision...enemy object # = " << enemyShapeVect[i].enemyShapeNum << endl;
-                // TODO: Fix here where wrong block is getting deleted - x & y's should be the same
-                // Delete Enemy Shape
-
                 PopBullet = true;
                 PopEnemyShape = true;
                 enemyShapeVect[i].destroyed = true;
-//                swap(enemyShapeVect[i], enemyShapeVect.back());
-//                enemyShapeVect.pop_back();
-//                i--;
 
                 score += 1;
-//                cout << "Pop Bullet is set to true if Enemy shape adn bullet collision" << endl;
             }
 
             // Check Boundaries of Objects in Window
-                // Physics (Moving Enemy Squares) - Go through all squares
-            int Xpos = enemyShapeVect[i].attr.getPosition().x;
-            int Ypos = enemyShapeVect[i].attr.getPosition().y;
-                // Makes sure enemy squares stay in screen
-            if (Xpos < 0 || Xpos > WIDTH - 50) enemyShapeVect[i].xEnemyShapeVelocity *= -1; // 50 for Enemy Shape width
-            if (Ypos < 0 || Ypos > HEIGHT - 50) enemyShapeVect[i].yEnemyShapeVelocity *= -1; // 50 for Enemy Shape width
-
-            enemyShapePosition.x += enemyShapeVect[i].xEnemyShapeVelocity;
-            enemyShapePosition.y += enemyShapeVect[i].yEnemyShapeVelocity;
-            enemyShapeVect[i].attr.setPosition(enemyShapePosition);
+            // Physics (Moving Enemy Squares) - Go through all squares
+            checkEnemyShapeBoundaries(enemyShapeVect, i, enemyShapePosition);
+//            int Xpos = enemyShapeVect[i].attr.getPosition().x;
+//            int Ypos = enemyShapeVect[i].attr.getPosition().y;
+//                // Makes sure enemy squares stay in screen
+//            if (Xpos < 0 || Xpos > WIDTH - 50) enemyShapeVect[i].xEnemyShapeVelocity *= -1; // 50 for Enemy Shape width
+//            if (Ypos < 0 || Ypos > HEIGHT - 50) enemyShapeVect[i].yEnemyShapeVelocity *= -1; // 50 for Enemy Shape width
+//
+//            enemyShapePosition.x += enemyShapeVect[i].xEnemyShapeVelocity;
+//            enemyShapePosition.y += enemyShapeVect[i].yEnemyShapeVelocity;
+//            enemyShapeVect[i].attr.setPosition(enemyShapePosition);
         }
 
         // Check Bullet Boundaries
-        int XBulletpos = bullet_queue.front().attr.getPosition().x;
-        int YBulletpos = bullet_queue.front().attr.getPosition().y;
+        PopBullet = checkBulletBoundaries(bullet_queue, PopBullet);
 
-            // If bullet hits boundary of window, delete bullet
-        if ((XBulletpos < 0 || XBulletpos > WIDTH - 10) && bullet_queue.front().isActive) { // 10 for Enemy Shape width
-            PopBullet = true;
-            bullet_queue.front().isActive = false;
-        }
-        if ((YBulletpos < 0 || YBulletpos > HEIGHT - 10) && bullet_queue.front().isActive) { // 10 for Enemy Shape width
-            PopBullet = true;
-            bullet_queue.front().isActive = false;
-        }
-
-            // If bullet hits boundary of window, delete bullet
+        // Check if user hits boundary of window
         if (playerPosition.x < 0 || playerPosition.x > WIDTH - 40) gameOver = true; // 10 for Enemy Shape width
         if (playerPosition.y < 0 || playerPosition.y > HEIGHT - 40) gameOver = true; // 10 for Enemy Shape width
 
@@ -393,7 +404,6 @@ int main() {
             }
             if (bullet_queue.front().isActive){
                 window.draw(bullet_queue.front().attr);
-//                bulletFired = false;
             }
             window.display();
         }
@@ -416,7 +426,9 @@ int main() {
 //  - sometimes enemy shapes move horizontally across side of screen
 //      - I think it's bc rand sometimes is 0
 //  - Clean up text to one variable
-//  - Fix bullet origin so its not on side of the screen
+//  - Make GRBIT like Pete said
+//  - Fix all fixed numbers and put them as variables
+//  - Add more shapes when all shapes have been hit --> add a time limit of how long the user is playing
 
 
 // - //  - fix the correct shape deleting - sometimes it has multiple shapes deleting as well
