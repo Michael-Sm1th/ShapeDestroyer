@@ -1,3 +1,13 @@
+/*
+Creator: Michael M. Smith
+
+Description: This game is called shape destroyer and the objective is to destroy all the enemy shapes without
+running out of bullets. The User moves around and shoots bullets at the enemy shapes and needs to hit them in order
+to destroy the enemy shape. The User is an independent object, but the Enemy Shapes and Bullets are objects inherited
+from the parent class, "GameObject".
+ */
+
+
 #include <SFML/Graphics.hpp>
 #include <cmath>
 #include <ctime>
