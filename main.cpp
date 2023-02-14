@@ -71,6 +71,11 @@ public:
 class Bullet: public GameObject {
 public:
 
+    bool bulletUp = false;
+    bool bulletDown = false;
+    bool bulletLeft = false;
+    bool bulletRight = false;
+
     static Bullet create_Bullet() {
         Bullet bullet;
         bullet.attr.setSize(sf::Vector2f(10, 10));
@@ -89,18 +94,27 @@ public:
         return bulletQueue;
     }
 
-    static void fireBullet(queue<Bullet> & queue, int x, int y, int p, int n){
-        queue.front().xVelocity = x;
-        queue.front().yVelocity = y;
-        sf::Vector2f bullet_pos = queue.front().attr.getPosition();
+    static void fireBullet(queue<Bullet> & bulletQueue, vector<Bullet> & bulletVector){
+
+        bulletQueue.front().isActive = true;
+        bulletVector.push_back(bulletQueue.front());
+        bulletQueue.pop();
+    }
+
+    static Bullet moveBullet(Bullet bullet, int x, int y, int p, int n) {
+        bullet.xVelocity = x;
+        bullet.yVelocity = y;
+        sf::Vector2f bullet_pos = bullet.attr.getPosition();
 
         // Directs the bullet in correct direction based on input
-        queue.front().xVelocity *= p;
-        queue.front().yVelocity *= n;
+        bullet.xVelocity *= p;
+        bullet.yVelocity *= n;
 
-        bullet_pos.x += queue.front().xVelocity;
-        bullet_pos.y += queue.front().yVelocity;
-        queue.front().attr.setPosition(bullet_pos);
+        bullet_pos.x += bullet.xVelocity;
+        bullet_pos.y += bullet.yVelocity;
+        bullet.attr.setPosition(bullet_pos);
+
+        return bullet;
     }
 };
 
@@ -143,20 +157,19 @@ void checkEnemyShapeBoundaries(vector<EnemyShape> & enemyShapeVect, int i, sf::V
     enemyShapeVect[i].attr.setPosition(enemyShapePosition);
 }
 
-bool checkBulletBoundaries(queue<Bullet> & bulletQueue, bool PopBullet){
-    int XBulletpos = bulletQueue.front().attr.getPosition().x;
-    int YBulletpos = bulletQueue.front().attr.getPosition().y;
+Bullet checkBulletBoundaries(Bullet bullet){
+    int XBulletpos = bullet.attr.getPosition().x;
+    int YBulletpos = bullet.attr.getPosition().y;
 
     // If bullet hits boundary of window, delete bullet
-    if ( (XBulletpos < 0 || XBulletpos > WIDTH - 10) && bulletQueue.front().isActive ){ // 10 for Enemy Shape width
-        PopBullet = true;
-        bulletQueue.front().isActive = false;
+    if ( (XBulletpos < 0 || XBulletpos > WIDTH - 10) && bullet.isActive ){ // 10 for Enemy Shape width
+        bullet.isActive = false;
     }
-    if ( (YBulletpos < 0 || YBulletpos > HEIGHT - 10) && bulletQueue.front().isActive ){ // 10 for Enemy Shape width
-        PopBullet = true;
-        bulletQueue.front().isActive = false;
+    if ( (YBulletpos < 0 || YBulletpos > HEIGHT - 10) && bullet.isActive ){ // 10 for Enemy Shape width
+        bullet.isActive = false;
     }
-    return PopBullet;
+
+    return bullet;
 }
 
 
@@ -176,16 +189,14 @@ int main() {
     player.setPosition(WIDTH / 2, HEIGHT / 2);
 
     // INITIALIZE VARIABLES
-    bool W = false;
-    bool A = false;
-    bool S = false;
-    bool D = false;
+    bool keyPressed = false;
     bool gameOver = false;
-    bool PopBullet = false;
     bool beginBuffer = true;
     bool outOfBullets = false;
     bool enemyShapeVectEmpty = false;
     int score = 0;
+
+    vector<int> WASDvect = {0, 0, 0, 0};
 
     // CREATE ENEMY SHAPES AND ADD THEM TO A VECTOR
     vector<EnemyShape> enemyShapeVect;
@@ -227,11 +238,11 @@ int main() {
 
 
     // Creates bullets and adds them to the bulletVect
-//    vector<Bullet> bulletVect;
-//    for ( int i = 0; i < NUM_BULLETS; i++ ){
-//        Bullet bullet = Bullet::create_Bullet();
-//        bulletVect.push_back(bullet);
-//    }
+    vector<Bullet> bulletVect;
+    for ( int i = 0; i < NUM_BULLETS; i++ ){
+        Bullet bullet = Bullet::create_Bullet();
+        bulletVect.push_back(bullet);
+    }
 
 
     while ( window.isOpen() ){
@@ -243,16 +254,13 @@ int main() {
                 window.close();
         }
 
-        if ( enemyShapeVect.empty() ){
-//            cout << "enemyShapeVect is empty" << endl;
+        if (enemyShapeVect.empty() ){
             enemyShapeVectEmpty = true;
         }
-        if ( bulletQueue.empty() ){
-//            cout << "bulletQueue is empty" << endl;
+        if (  bulletQueue.empty() &&  bulletVect.empty() ){ // TODO: Fix this
             outOfBullets = true;
             gameOver = true;
         }
-
 
         // Get position of enemy shape and user
         sf::Vector2f playerPosition = player.getPosition();
@@ -267,74 +275,114 @@ int main() {
             player.move(0.0f, -5.0f);
         if ( sf::Keyboard::isKeyPressed(sf::Keyboard::Down) )
             player.move(0.0f, 5.0f);
-        if( sf::Keyboard::isKeyPressed(sf::Keyboard::W) ){ // Shoot bullet Upwards
-            W = true;
-            S = false;
-            A = false;
-            D = false;
-            cout << endl;
-            bulletQueue.front().isActive = true;
-            bulletQueue.front().attr.setPosition(playerPosition.x + 14.5, playerPosition.y);
-//            cout << "printing player position in W place: " << playerPosition.x << " & " << playerPosition.y << endl;
+        if( sf::Keyboard::isKeyPressed(sf::Keyboard::W) && !keyPressed ){
+            WASDvect[0] = 1;
         }
-        if( sf::Keyboard::isKeyPressed(sf::Keyboard::A) ){ // Shoot bullet Left
-            W = false;
-            A = true;
-            S = false;
-            D = false;
-            bulletQueue.front().isActive = true;
-            bulletQueue.front().attr.setPosition(playerPosition.x, playerPosition.y + 15);
+        else if( sf::Keyboard::isKeyPressed(sf::Keyboard::A) && !keyPressed){
+            WASDvect[1] = 1;
         }
-        if( sf::Keyboard::isKeyPressed(sf::Keyboard::S) ){ // Shoot bullet Down
-            W = false;
-            A = false;
-            S = true;
-            D = false;
-            cout << endl;
-            bulletQueue.front().isActive = true;
-            bulletQueue.front().attr.setPosition(playerPosition.x + 14.5, playerPosition.y + 29);
+        else if( sf::Keyboard::isKeyPressed(sf::Keyboard::S) && !keyPressed){
+            WASDvect[2] = 1;
         }
-        if( sf::Keyboard::isKeyPressed(sf::Keyboard::D) ){ // Shoot bullet Right
-            W = false;
-            A = false;
-            S = false;
-            D = true;
-            bulletQueue.front().isActive = true;
-            bulletQueue.front().attr.setPosition(playerPosition.x + 29, playerPosition.y + 15);
+        else if(sf::Keyboard::isKeyPressed(sf::Keyboard::D) && !keyPressed){
+            WASDvect[3] = 1;
+        }
+        else{
+            keyPressed = false;
         }
 
-        if ( W ) Bullet::fireBullet(bulletQueue, 0, -3, 1, 1);
-        if ( S ) Bullet::fireBullet(bulletQueue, 0, 3, 1, 1);
-        if ( A ) Bullet::fireBullet(bulletQueue, 3, 0, -1, 1);
-        if ( D ) Bullet::fireBullet(bulletQueue, 3, 0, 1, 1);
+        if (event.type == sf::Event::KeyReleased){
+            if ( WASDvect[0] ) {  // Shoot bullet Upwards
+                keyPressed = true;
+
+                bulletQueue.front().attr.setPosition(playerPosition.x + 14.5, playerPosition.y);
+                bulletQueue.front().bulletUp = true;
+                cout << "Adding bulletQueue.front() to bulletVect for W pressed" << endl;
+
+                WASDvect[0] = 0;
+//                W = false;
+
+            }
+            else if ( WASDvect[1] ) { // Shoot bullet Left
+                keyPressed = true;
+
+                bulletQueue.front().attr.setPosition(playerPosition.x, playerPosition.y + 15);
+                bulletQueue.front().bulletLeft = true;
+                cout << "Adding bulletQueue.front() to bulletVect for A pressed" << endl;
+                WASDvect[1] = 0;
+            }
+            else if ( WASDvect[2] ) { // Shoot bullet Down
+                keyPressed = true;
+
+                bulletQueue.front().attr.setPosition(playerPosition.x + 14.5, playerPosition.y + 29);
+                bulletQueue.front().bulletDown = true;
+                cout << "Adding bulletQueue.front() to bulletVect for S pressed" << endl;
+                WASDvect[2] = 0;
+            }
+            else if ( WASDvect[3] ) { // Shoot bullet Right
+                keyPressed = true;
+
+                bulletQueue.front().attr.setPosition(playerPosition.x + 29, playerPosition.y + 15);
+                bulletQueue.front().bulletRight = true;
+                cout << "Adding bulletQueue.front() to bulletVect for D pressed" << endl;
+                WASDvect[3] = 0;
+            }
+        }
+
+
+        if (!bulletQueue.empty() && keyPressed) Bullet::fireBullet(bulletQueue, bulletVect);
+
+        // MOVING BULLET
+        for (int j = 0; j < bulletVect.size(); j++) {
+            int XBulletpos = bulletVect[j].attr.getPosition().x;
+            int YBulletpos = bulletVect[j].attr.getPosition().y;
+
+            if (bulletVect[j].bulletUp){
+                bulletVect[j] = Bullet::moveBullet(bulletVect[j], 0, -3, 1, 1);
+            }
+            else if(bulletVect[j].bulletLeft){
+                bulletVect[j] = Bullet::moveBullet(bulletVect[j], 3, 0, -1, 1);
+            }
+            else if(bulletVect[j].bulletDown){
+                bulletVect[j] = Bullet::moveBullet(bulletVect[j], 0, 3, 1, 1);
+            }
+            else if(bulletVect[j].bulletRight){
+                bulletVect[j] = Bullet::moveBullet(bulletVect[j], 3, 0, 1, 1);
+            }
+
+            // Delete bullet if it goes out of the boundaries
+            bulletVect[j] = checkBulletBoundaries(bulletVect[j]);
+        }
+
 
 
         for ( int i = 0; i < enemyShapeVect.size(); i++ ){
-//            cout << "Printing enemyShapeVect.size(): " << enemyShapeVect.size() << endl;
             // Get position of Objects
             sf::Vector2f playerPosition = player.getPosition();
             sf::Vector2f enemyShapePosition = enemyShapeVect[i].attr.getPosition();
-            sf::Vector2f bulletPosition = bulletQueue.front().attr.getPosition();
 
             // Check if position of enemy shape and user hit each other
             if ( EnemyShapeUserCollision(playerPosition, enemyShapePosition) ){
                 gameOver = true;
             }
 
-            // Check if position of enemy shape and a bullet hit each other
-            if ( EnemyShapeBulletCollision(enemyShapePosition, bulletPosition) && bulletQueue.front().isActive ){
+            // Traverse through each active bullet for collisions with any objects
+            for (int j = 0; j < bulletVect.size(); j++){
+                sf::Vector2f bulletPosition = bulletVect[j].attr.getPosition();
+
+                // Check if position of enemy shape and a bullet hit each other
+                if ( EnemyShapeBulletCollision(enemyShapePosition, bulletPosition) && bulletVect[j].isActive ){
 //                cout << "Enemy Shape Collision...enemy object # = " << enemyShapeVect[i].enemyShapeNum << endl;
-                PopBullet = true;
-                enemyShapeVect[i].isActive = false;
-                score += 1;  // Increment Score
+                    enemyShapeVect[i].isActive = false;
+                    bulletVect[j].isActive = false;
+                    score += 1;  // Increment Score
+                }
             }
 
             // Check if Enemy Shape is within the Boundaries of the Window
             checkEnemyShapeBoundaries(enemyShapeVect, i, enemyShapePosition);
         }
 
-        // Check if Bullet is in Boundaries of the Window
-        PopBullet = checkBulletBoundaries(bulletQueue, PopBullet);
 
         // Check if user hits boundary of window
         if ( (playerPosition.x < 0 || playerPosition.x > WIDTH - 40)
@@ -351,10 +399,13 @@ int main() {
             }
         }
 
-        //     Remove bullets that have been destroyed
-        if( PopBullet ){
-            PopBullet = false;
-            bulletQueue.pop();
+
+        // DELETE NON ACTIVE BULLETS IN BULLET VECT
+        for (int i = 0; i < bulletVect.size(); i++ ){
+            if(!bulletVect[i].isActive){
+                swap(bulletVect[i], bulletVect.back());
+                bulletVect.pop_back();
+            }
         }
 
         // UPDATE SCORE
@@ -408,8 +459,10 @@ int main() {
             for ( int i = 0; i < NUM_ENEMY_SHAPES; i++ ){
                 window.draw(enemyShapeVect[i].attr);
             }
-            if ( bulletQueue.front().isActive ){
-                window.draw(bulletQueue.front().attr);
+            for (int j = 0; j < bulletVect.size(); j++){
+                if ( bulletVect[j].isActive ){
+                    window.draw(bulletVect[j].attr);
+                }
             }
             window.display();
         }
@@ -422,15 +475,9 @@ int main() {
 // TODO:
 //  - sometimes enemy shapes move horizontally across side of screen
 //      - I think it's bc rand sometimes is 0
-//  - Shoot multiple bullets
-//  - Make GRBIT for WASD keys like Pete said - ask Pete about how to do it
+//  - Fix enemy shapes spawning near user at the beginning
 //  - Fix all fixed numbers and put them as variables
 //  - Delete Enemy Shape Object Num before I send it
 //  - Maybe don't use pass by reference - is it harder to delete objects/memory?
 //  - Is it possible to make anywhere more efficient? Better time complexity?
 
-
-// Press W, add bullet to queue - loop that updates bullet, checks which bullet is dead
-// Add alive bullets to new vector
-// While vector of bullets is not empty
-// Loop through vector of bullets to check if bullet is dead
