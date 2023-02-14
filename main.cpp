@@ -38,7 +38,7 @@ public:
     int enemyShapeNum = 0;
 
     static EnemyShape create_EnemyShape(){
-        sf::Vector2f rectanglePosition(rand() % (WIDTH + 1) - 2, rand() % (HEIGHT + 1) - 2);
+        sf::Vector2f rectanglePosition((rand() % (WIDTH - 50)) + 25, rand() % ((HEIGHT *  3/4)  + 10));
 
         EnemyShape enemyShape;
         enemyShape.attr.setPosition(rectanglePosition);
@@ -186,7 +186,7 @@ int main() {
     player.setRadius(20);
     player.setFillColor(sf::Color::Green);
     player.setOrigin(1, 1);
-    player.setPosition(WIDTH / 2, HEIGHT / 2);
+    player.setPosition(WIDTH / 2, HEIGHT / 1.2);
 
     // INITIALIZE VARIABLES
     bool keyPressed = false;
